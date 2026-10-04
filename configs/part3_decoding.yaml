@@ -1,0 +1,22 @@
+model_name: "EleutherAI/Pythia-160M"
+dataset_name: "hamishivi/ROCStories"
+num_samples: 1000
+max_new_tokens: 40
+
+greedy:
+  enabled: true
+
+top_k:
+  enabled: true
+  k: 40
+  temperature: 0.8
+
+top_p:
+  enabled: true
+  p: 0.9
+  temperature: 0.8
+
+beam_search:
+  enabled: true
+  widths: [1, 2, 4]
+  length_penalty: 0.7

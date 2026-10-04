@@ -1,0 +1,5 @@
+optimizer: "adan"
+learning_rate: 0.001
+weight_decay: 0.02
+betas: [0.98, 0.92, 0.99]
+eps: 1e-8

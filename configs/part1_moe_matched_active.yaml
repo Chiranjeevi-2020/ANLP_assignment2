@@ -1,0 +1,18 @@
+# MoE Ablation 5: 4 experts, 2 active (Matched Active Parameters to Dense)
+D_model: 256
+N_ctx: 256
+N_vocab: 16000
+N_layers: 6
+N_heads: 8
+D_ff: 1024
+dropout: 0.1
+use_moe: true
+ablation_variant: "matched_active"
+num_experts: 4
+num_active_experts: 2
+aux_loss_coef: 0.01
+
+learning_rate: 0.0003
+weight_decay: 0.01
+batch_size: 32
+max_steps: 10000
