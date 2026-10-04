@@ -7,6 +7,14 @@
 
 ---
 
+### 🔗 Official Submission Links & Artifacts (Deliverables)
+- **Hugging Face Model Checkpoints:** [https://huggingface.co/Chiranjeevi-2020/ANLP-Assignment-2](https://huggingface.co/Chiranjeevi-2020/ANLP-Assignment-2)
+- **Weights & Biases (WandB) Dashboard:** [https://wandb.ai/Chiranjeevi-2020/ANLP-Assignment-2](https://wandb.ai/Chiranjeevi-2020/ANLP-Assignment-2)
+- **GitHub Source Repository:** [https://github.com/Chiranjeevi-2020/ANLP_assignment2](https://github.com/Chiranjeevi-2020/ANLP_assignment2)
+- **Official Technical Report (LaTeX PDF):** [`report.pdf`](./report.pdf) (8 pages, 11pt, matching IIIT-H assignment formatting)
+- **LaTeX Source Code:** [`report.tex`](./report.tex)
+
+
 ## Table of Contents
 1. [Overview & Repository Layout](#1-overview--repository-layout)
 2. [Task 1: Mixture of Experts (MoE) Architecture](#2-task-1-mixture-of-experts-moe-architecture)
