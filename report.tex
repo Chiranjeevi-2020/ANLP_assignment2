@@ -32,52 +32,57 @@
 \maketitle
 
 \begin{abstract}
-This report presents an architectural and empirical investigation of three foundational pillars in modern neural language modeling: (1) \textbf{Sparse Mixture of Experts (MoE)} feed-forward layers with auxiliary load-balancing regularization across 5 architectural configurations; (2) \textbf{First- and Second-Order Pretraining Optimizers from Scratch} subclassing \texttt{torch.optim.Optimizer} without predefined library modules; and (3) \textbf{Autoregressive Decoding Strategies} implemented strictly via \texttt{model.forward()} on \texttt{EleutherAI/Pythia-160M} evaluated on 1,000 narrative stories from \texttt{hamishivi/ROCStories}. We verify parameter count parity within 0.12\%, demonstrate emergent bilingual routing specialization (Vietnamese vs. Japanese), replicate Chinchilla pretraining dynamics, and prove linear beam search latency scaling $\mathcal{O}(B \cdot T)$. All model checkpoints and experiment telemetry are linked to Hugging Face and Weights \& Biases.
+This report details an architectural and empirical investigation of three core components in neural language model design: (1) \textbf{Sparse Mixture of Experts (MoE)} feed-forward layers evaluated across five capacity-controlled ablations on non-romanized translation; (2) \textbf{First- and Second-Order Pretraining Optimizers from Scratch} implemented strictly via \texttt{torch.optim.Optimizer} subclassing; and (3) \textbf{Autoregressive Decoding Strategies} built exclusively on top of \texttt{model.forward()} on \texttt{EleutherAI/Pythia-160M} using 1,000 narrative stories from \texttt{hamishivi/ROCStories}. We present analytical derivations for load-balancing regularizers, orthogonal matrix polar iterations, and length-normalized beam search, complemented by empirical validation on GPU hardware. All code, checkpoints, and logs are publicly available.
 \end{abstract}
 
-\section{Problem and Data}
+\section{Problem Formulation and Datasets}
 
-The assignment investigates the structural and optimization mechanisms of causal language models across three distinct benchmark tasks:
+Our experimental workflow investigates model architecture, optimization dynamics, and inference generation across three distinct datasets:
 
-\paragraph{1. Bilingual Translation Task (\texttt{belumind/en-vi-ja-curated-500k-triplets}):}
-The model is trained to translate non-romanized Vietnamese and Japanese texts to English. Non-romanization requires custom Byte-Level BPE tokenization to handle Japanese Kanji/Kana and Vietnamese multi-accent diacritics without out-of-vocabulary (OOV) tokens. Each triplet produces two parallel training pairs (Vietnamese--English and Japanese--English), prepended with language prefix tokens \texttt{<vi>} and \texttt{<ja>}.
+\paragraph{1. Multilingual Translation (\texttt{belumind/en-vi-ja-curated-500k-triplets}):}
+We train a causal decoder-only model to translate Vietnamese and Japanese texts into English. A key challenge is that input texts are non-romanized: Japanese uses Kanji ideograms and Kana syllabaries, while Vietnamese utilizes multi-accent Latin diacritics. Standard character tokenizers produce severe out-of-vocabulary (OOV) rates, while standard word tokenizers result in intractable vocabularies. We train a custom Byte-Level BPE tokenizer with a vocabulary size of 16,384, mapping arbitrary UTF-8 byte streams into compact subwords without OOV tokens. Each triplet generates two directed training pairs (Vietnamese--English and Japanese--English), prepended with language control tokens \texttt{<vi>} and \texttt{<ja>}.
 
-\paragraph{2. Pretraining Dynamics Corpus (\texttt{browndw/human-ai-parallel-corpus}):}
-To analyze pretraining optimizer dynamics (replicating Figure 2 of Wen et al., 2025), a dense causal Transformer is pretrained on next-token prediction up to $1.0\times$ dataset tokens. Validation cross-entropy loss and test BLEU are evaluated at intervals of $0.1\times$ dataset tokens.
+\paragraph{2. Pretraining Dynamics Benchmark (\texttt{browndw/human-ai-parallel-corpus}):}
+To analyze pretraining optimizer dynamics (replicating Figure 2 of Wen et al., 2025), a dense causal Transformer is trained on next-token prediction across $1.0\times$ dataset tokens. Validation cross-entropy loss and test BLEU are evaluated at intervals of $0.1\times$ dataset tokens to measure convergence rates per unit of processed data.
 
-\paragraph{3. Narrative Continuation Benchmark (\texttt{hamishivi/ROCStories}):}
-To evaluate autoregressive decoding strategies without calling high-level APIs like \texttt{model.generate()}, 1,000 four-sentence narrative story prompts are fed to \texttt{EleutherAI/Pythia-160M} to generate fifth-sentence completions, measuring perplexity, token accuracy, BLEU, and latency.
+\paragraph{3. Narrative Story Continuation (\texttt{hamishivi/ROCStories}):}
+To evaluate decoding strategies without high-level library wrappers, 1,000 four-sentence narrative prompts are passed to \texttt{EleutherAI/Pythia-160M}. Each strategy generates fifth-sentence completions, measuring statistical perplexity, token accuracy, BLEU-4, and runtime latency.
 
-\section{Common Model Design}
+\section{Common Model Architecture}
 
-The baseline architecture is a causal decoder-only Transformer built from basic PyTorch primitives. In compliance with General Instruction 4, attention projections, causal masks, layer normalization, residual connections, and token generation loops are implemented from scratch.
+In compliance with assignment guidelines, all Transformer components are implemented from fundamental PyTorch tensor operations. The baseline model is a causal decoder-only Transformer with $D_{\text{model}} = 256$, 8 attention heads, 4 layers, and a context window of $N_{\text{ctx}} = 256$.
 
-Scaled dot-product attention is defined as:
+\paragraph{Causal Multi-Head Attention:}
+Scaled dot-product attention computes query-key similarity scaled by head dimension $d_k = D_{\text{model}} / H = 32$:
 \begin{equation}
 \text{Attention}(Q, K, V) = \text{softmax}\left(\frac{Q K^T}{\sqrt{d_k}} + M\right) V
 \end{equation}
-where $M_{ij} = -\infty$ for $j > i$ enforces strict autoregressive causality. Pre-LayerNorm is applied before every attention and feed-forward block, stabilizing deep residual representations:
+where the causal mask $M_{ij} = -\infty$ for $j > i$ prevents positions from attending to future tokens.
+
+\paragraph{Pre-Layer Normalization and Weight Tying:}
+Every sub-layer applies Pre-LayerNorm to stabilize gradient flow through deep residual paths:
 \begin{equation}
 x^{(l)} = x^{(l-1)} + \text{Attention}(\text{LN}(x^{(l-1)})), \quad x^{(l)} = x^{(l)} + \text{FFN}(\text{LN}(x^{(l)}))
 \end{equation}
-The token embeddings are tied with the final unembedding projection matrix ($W_{\text{unembed}} = W_{\text{embed}}^T$), reducing parameter footprint.
+Input embedding weights are tied with the final unembedding projection matrix ($W_{\text{unembed}} = W_{\text{embed}}^T$), reducing parameter count and tying semantic representations.
 
 \section{Task 1: Mixture of Experts (MoE) Architecture}
 
-The standard Transformer feed-forward network (FFN) expands input embeddings $D_{\text{model}} \to D_{\text{ff}} \to D_{\text{model}}$ via a two-layer MLP with GELU activation:
+The standard dense feed-forward network (FFN) applies a two-layer MLP with intermediate expansion $D_{\text{model}} \to D_{\text{ff}} \to D_{\text{model}}$ ($256 \to 1024 \to 256$) and GELU activation:
 \begin{equation}
 \text{FFN}_{\text{dense}}(x) = \text{GELU}(x W_1 + b_1) W_2 + b_2
 \end{equation}
-We implement a drop-in MoE module replacing the dense FFN across five architectural ablations.
+To investigate routing sparsity and capacity scaling, we develop a drop-in MoE module supporting five architectural variants.
 
 \begin{table}[h]
 \centering
 \small
-\caption{Architectural FFN configurations used in the MoE ablation study ($D_{\text{model}}=256, D_{\text{ff}}=1024$).}
+\caption{Architectural FFN configurations and capacity accounting ($D_{\text{model}}=256, D_{\text{ff}}=1024$).}
 \label{tab:moe_configs}
-\resizebox{\textwidth}{!}{\begin{tabular}{llccccc}
+\resizebox{\textwidth}{!}{
+\begin{tabular}{llccccc}
 \toprule
-\textbf{Config.} & \textbf{Variant Name} & \textbf{Experts ($N$)} & \textbf{Active ($k$)} & \textbf{Expert Dim ($d_{\text{ff}}$)} & \textbf{Total Params} & \textbf{Active Params} \\
+\textbf{Config.} & \textbf{Variant Description} & \textbf{Experts ($N$)} & \textbf{Active ($k$)} & \textbf{Expert Dim ($d_{\text{ff}}$)} & \textbf{Total Params} & \textbf{Active Params} \\
 \midrule
 C1 & Dense Baseline       & 1 & 1 & 1024 & 8,900,608 & 8,900,608 (100\%) \\
 C2 & MoE Top-1           & 4 & 1 & 256  & 8,911,360 & 6,542,848 (73.5\%) \\
@@ -88,35 +93,41 @@ C5 & Matched-Active MoE  & 4 & 2 & 512  & 12,063,232 & 8,908,288 (100.08\%) \\
 \end{tabular}}
 \end{table}
 
-\subsection{Ablation Variants}
+\subsection{Architectural Configurations}
 \begin{itemize}
-    \item \textbf{C1 (Dense Baseline):} Standard 2-layer MLP ($D_{\text{ff}}=1024$).
-    \item \textbf{C2 (MoE Top-1):} 4 experts ($d_{\text{ff}}=256$), with 1 active per token.
-    \item \textbf{C3 (MoE Top-2):} 4 experts ($d_{\text{ff}}=256$), with 2 active per token.
-    \item \textbf{C4 (Shared + Routed):} 1 shared expert always active + 3 routed experts (1 active per token), providing an invariant contextual representation anchor.
-    \item \textbf{C5 (Matched-Active MoE):} 4 experts ($d_{\text{ff}}=512$) with Top-2 routing, sized so active FFN width matches dense baseline ($2 \times 512 = 1024$).
+    \item \textbf{C1 (Dense Baseline):} Standard two-layer MLP with hidden dimension $D_{\text{ff}} = 1024$.
+    \item \textbf{C2 (MoE Top-1):} 4 experts with reduced width ($d_{\text{ff}} = 256$), activating exactly 1 expert per token.
+    \item \textbf{C3 (MoE Top-2):} 4 experts ($d_{\text{ff}} = 256$), activating 2 experts per token with weighted combining.
+    \item \textbf{C4 (Shared + Routed MoE):} 1 shared expert ($d_{\text{ff}} = 256$) always active on all tokens, combined with 3 routed experts (1 active per token). This provides an invariant contextual baseline while allowing specialist adaptation.
+    \item \textbf{C5 (Matched-Active MoE):} 4 experts ($d_{\text{ff}} = 512$) with Top-2 routing, sized such that total active FFN parameters match the dense baseline.
 \end{itemize}
 
-\subsection{Parameter Accounting and Parity Verification}
-Let $D = D_{\text{model}} = 256$ and $D_{\text{ff}} = 1024$. The dense FFN contributes $2 D D_{\text{ff}} + D_{\text{ff}} + D = 525,568$ parameters per layer. For C2, C3, and C4, setting $d_{\text{expert}} = D_{\text{ff}} / 4 = 256$ yields $4 \times (2 D d_{\text{expert}} + d_{\text{expert}} + D) = 526,336$ parameters. Adding the router projection matrix $W_g \in \mathbb{R}^{D \times 4}$ (1,024 weights) yields a total model parameter count of 8,911,360, matching the dense baseline (8,900,608) within \textbf{+0.12\%}. For C5, matching active FFN width requires $d_{\text{expert}} = D_{\text{ff}} / 2 = 512$, achieving active parameter parity within \textbf{+0.08\%} (8,908,288 vs. 8,900,608).
+\subsection{Mathematical Capacity and Parameter Parity}
+To conduct a fair scientific ablation, model capacity must be strictly controlled:
+\begin{itemize}
+    \item \textbf{Total Parameter Parity (C1 to C4):} A dense FFN contains $2 D_{\text{model}} D_{\text{ff}} + D_{\text{ff}} + D_{\text{model}} = 525,568$ parameters per layer. By setting each expert's intermediate width to $d_{\text{expert}} = D_{\text{ff}} / 4 = 256$, four experts collectively possess $4 \times (2 D_{\text{model}} d_{\text{expert}} + d_{\text{expert}} + D_{\text{model}}) = 526,336$ parameters. Adding the linear router projection matrix ($D_{\text{model}} \times N = 256 \times 4 = 1,024$ weights), total parameters differ from the dense baseline by only \textbf{+0.12\%}, ensuring differences stem from routing dynamics rather than parameter scale.
+    \item \textbf{Active Parameter Parity (C5):} With $k=2$ active experts per token, matching the dense FFN width ($D_{\text{ff}} = 1024$) requires each expert to have $d_{\text{expert}} = D_{\text{ff}} / 2 = 512$. This provides active capacity parity within \textbf{+0.08\%} (8,908,288 vs. 8,900,608), enabling direct comparison of sparse compute efficiency against dense execution.
+\end{itemize}
 
-\subsection{Router Mechanics and Switch Auxiliary Loss}
-Top-$k$ routing gates tokens according to router logits $H(x) = x W_g$. Gating probabilities are computed via softmax:
+\subsection{Router Dynamics and Switch Auxiliary Load-Balancing Loss}
+A linear router projects hidden representations $x$ to expert logits $H(x) = x W_g$. Gating weights are calculated via softmax over expert logits:
 \begin{equation}
 P_i(x) = \frac{\exp(H(x)_i)}{\sum_{j=1}^N \exp(H(x)_j)}
 \end{equation}
-Without regularization, the router suffers from \textbf{representation collapse}: early in training, small gradient fluctuations cause the router to route all tokens to one expert, starving the other three. We implement the Switch Transformer / GShard auxiliary loss:
+Standard softmax gating exhibits a known vulnerability: \textbf{representation collapse}. Early in training, minor initialization variance causes one expert to receive slightly lower loss. The router responds by routing more tokens to it, starving other experts of gradient updates and leaving them untrained.
+
+Task-level cross-entropy cannot prevent this because starving an expert incurs no task loss penalty. We address this by incorporating the \textbf{Switch Transformer / GShard auxiliary loss}:
 \begin{equation}
 \mathcal{L}_{\text{aux}} = \alpha \cdot N \sum_{i=1}^N f_i \cdot P_i, \quad f_i = \frac{1}{T} \sum_{t=1}^T \mathbb{I}(\text{token } t \to \text{expert } i), \quad P_i = \frac{1}{T} \sum_{t=1}^T P_i(x_t)
 \end{equation}
-where $\alpha = 0.01$ is the auxiliary coefficient. Because $P_i$ is continuously differentiable while $f_i$ is non-differentiable (treated as a constant), backpropagation drives router weights toward balanced routing ($f_i = P_i = 1/N$) without perturbing task gradients.
+where $\alpha = 0.01$ is the penalty weight, $f_i$ is the empirical token fraction dispatched to expert $i$, and $P_i$ is the average routing probability. Crucially, $P_i$ is smoothly differentiable while $f_i$ is non-differentiable (treated as a constant). Backpropagation adjusts router weights $W_g$ to minimize non-uniformity, achieving an optimal loss when $f_i = P_i = 1/N$ (uniform load) without interfering with translation task gradients.
 
 \section{Task 2: Custom Optimizers from Scratch}
 
-All optimizers were implemented strictly by subclassing \texttt{torch.optim.Optimizer} without using any predefined PyTorch optimizer modules. We explore one optimizer from each of the four categories from Wen et al. (2025), plus the Sophia second-order bonus:
+In strict accordance with guidelines, all optimizers were implemented strictly by subclassing \texttt{torch.optim.Optimizer} without importing predefined PyTorch optimizer modules. We implemented one optimizer from each of the four categories from Wen et al. (2025), plus the Sophia second-order bonus:
 
 \subsection{Category 1: Decoupled Weight Decay (CustomAdamW)}
-Standard L2 regularization couples parameter decay with adaptive gradient scaling, penalizing frequently updated coordinates insufficiently. CustomAdamW decouples weight decay:
+Standard L2 regularization adds $\lambda \theta$ directly to the gradient $g_t$, which is subsequently scaled by $\sqrt{v_t}$. Consequently, weights with large gradients receive attenuated regularization, while sparse weights are overly decayed. Decoupled weight decay separates parameter shrinkage from adaptive variance scaling:
 \begin{align}
 \theta_t &= \theta_{t-1} - \eta \lambda \theta_{t-1} \\
 m_t &= \beta_1 m_{t-1} + (1-\beta_1) g_t, \quad v_t = \beta_2 v_{t-1} + (1-\beta_2) g_t^2 \\
@@ -124,7 +135,7 @@ m_t &= \beta_1 m_{t-1} + (1-\beta_1) g_t, \quad v_t = \beta_2 v_{t-1} + (1-\beta
 \end{align}
 
 \subsection{Category 2: Variance-Reduced Nesterov Momentum (CustomAdan)}
-Adan estimates gradient derivatives via difference terms $(g_k - g_{k-1})$ to dampen stochastic oscillations:
+Adan accelerates convergence by incorporating gradient difference terms $(g_k - g_{k-1})$ as finite-difference approximations to the Hessian-vector product, dampening high-frequency oscillations:
 \begin{align}
 v_k &= (1-\beta_2) v_{k-1} + \beta_2 (g_k - g_{k-1}), \quad m_k = (1-\beta_1) m_{k-1} + \beta_1 g_k \\
 n_k &= (1-\beta_3) n_{k-1} + \beta_3 [g_k + (1-\beta_2)(g_k - g_{k-1})]^2 \\
@@ -132,49 +143,62 @@ n_k &= (1-\beta_3) n_{k-1} + \beta_3 [g_k + (1-\beta_2)(g_k - g_{k-1})]^2 \\
 \end{align}
 
 \subsection{Category 3: Memory-Efficient Sign Momentum (CustomLion)}
-Lion tracks solely a single momentum buffer, cutting optimizer state memory by \textbf{50\%} relative to AdamW:
+Standard adaptive optimizers maintain two state buffers per parameter ($m_t, v_t$), requiring $8$ bytes/param in float32. Lion completely discards the second-moment buffer $v_t$, tracking solely momentum $m_t$ and using coordinate-wise signs for parameter updates:
 \begin{align}
 c_t &= \beta_1 m_{t-1} + (1-\beta_1) g_t \\
 \theta_t &= \theta_{t-1} - \eta (\text{sign}(c_t) + \lambda \theta_{t-1}), \quad m_t = \beta_2 m_{t-1} + (1-\beta_2) g_t
 \end{align}
+This reduces optimizer state memory by exactly \textbf{50\%}. The sign operation acts as uniform step quantization, serving as an effective gradient noise regularizer.
 
 \subsection{Category 4: Matrix-Based Polar Decomposition (CustomMuon)}
-For 2D weight matrices $W \in \mathbb{R}^{d_{\text{out}} \times d_{\text{in}}}$, Muon computes an orthogonal polar factor using a quintic Newton-Schulz polynomial iteration:
+AdamW treats parameters as independent 1D scalars, ignoring the linear algebraic structure of 2D weight matrices $W \in \mathbb{R}^{d_{\text{out}} \times d_{\text{in}}}$. Muon computes a polar decomposition via a 5-step quintic Newton-Schulz polynomial iteration to map the momentum matrix to the nearest orthogonal matrix:
 \begin{align}
 M_t &= \mu M_{t-1} + G_t, \quad X_0 = \frac{M_t}{\|M_t\|_F} \\
 X_{k+1} &= X_k (a I + b X_k^T X_k + c (X_k^T X_k)^2), \quad (a, b, c) = (3.4445, -4.7750, 2.0315)
 \end{align}
-Orthogonal updates preserve singular value spectra, preventing gradient vanishing across deep attention blocks. Biases and 1D vectors fall back to decoupled AdamW.
+Because orthogonal transformations preserve Euclidean norms ($\|U x\|_2 = \|x\|_2$), Muon updates act as pure rotations, preventing representation collapse and gradient explosion in deep attention projections. 1D biases and embeddings fall back to decoupled AdamW.
 
 \subsection{Bonus Category: Second-Order Diagonal Curvature (CustomSophia)}
-Sophia leverages a diagonal Hessian estimate $h_t$ with coordinate clipping bound $\rho=0.04$:
+Sophia incorporates diagonal Hessian estimates $h_t$ with coordinate clipping bound $\rho=0.04$, preventing destructive parameter leaps across ill-conditioned loss ravines:
 \begin{equation}
 \theta_t = \theta_{t-1} - \eta \cdot \text{clip}\left(\frac{m_t}{\max(h_t, \gamma)}, -\rho, \rho\right) - \eta \lambda \theta_{t-1}
 \end{equation}
 
 \section{Task 3: Autoregressive Decoding Strategies from Scratch}
 
-All generation strategies were implemented strictly using \texttt{model.forward()} without calling \texttt{model.generate()} on \texttt{EleutherAI/Pythia-160M}:
+All generation algorithms were implemented strictly using \texttt{model.forward()} without calling \texttt{model.generate()} on \texttt{EleutherAI/Pythia-160M}:
 \begin{itemize}
-    \item \textbf{Greedy Decoding:} Deterministic argmax step: $x_t = \arg\max_{v \in V} \log P(v \mid x_{<t})$.
-    \item \textbf{Top-$k$ Sampling ($k=40, T=0.8$):} Truncates vocabulary logits to top $k$ candidates, scales by temperature $T$, and samples categorically.
-    \item \textbf{Top-$p$ (Nucleus) Sampling ($p=0.90, T=0.8$):} Dynamically sizes candidate pool to smallest $V^{(p)}$ satisfying $\sum_{v \in V^{(p)}} P(v \mid x_{<t}) \ge p$.
-    \item \textbf{Beam Search ($B \in \{1, 2, 4\}$):} Maintains $B$ candidate hypotheses with length normalization:
+    \item \textbf{Greedy Decoding:} Deterministically chooses the highest-probability token: $x_t = \arg\max_{v \in V} \log P(v \mid x_{<t})$.
+    \item \textbf{Top-$k$ Sampling ($k=40, T=0.8$):} Truncates logits to the top $k$ candidates, re-normalizes with temperature $T$, and samples from the categorical distribution.
+    \item \textbf{Top-$p$ (Nucleus) Sampling ($p=0.90, T=0.8$):} Dynamically isolates the smallest set $V^{(p)}$ whose cumulative probability mass satisfies $\sum_{v \in V^{(p)}} P(v \mid x_{<t}) \ge p$, setting excluded logits to $-\infty$.
+    \item \textbf{Beam Search ($B \in \{1, 2, 4\}$):} Tracks $B$ candidate hypotheses with length normalization:
     \begin{equation}
     \text{Score}(h) = \frac{\sum_{t=1}^T \log P(x_t \mid x_{<t})}{\left(\frac{5+T}{6}\right)^\alpha}, \quad \alpha = 0.6
     \end{equation}
+    The length penalty prevents the search from favoring unnaturally short sequences, as joint log-probabilities monotonically decrease with length.
 \end{itemize}
 
-\section{Empirical Results and Analysis}
+\section{Evaluation Metrics and Measurement Framework}
 
-\subsection{MoE Translation Performance \& Linguistic Specialization}
+To ensure precise interpretation of results, our evaluation relies on the following standard NLP metrics:
+\begin{itemize}
+    \item \textbf{Perplexity (PPL):} The exponentiated cross-entropy loss, $\text{PPL} = \exp(\mathcal{L})$. It represents the effective branching factor, or the number of equally likely tokens between which the model is uncertain. Lower perplexity denotes a more confident, accurate model.
+    \item \textbf{BLEU Score (Papineni et al., 2002):} Evaluates machine translation and generation quality by computing precision over modified $n$-grams (1-gram through 4-gram) against ground-truth references, multiplied by a brevity penalty $\text{BP} = \min(1, \exp(1 - r/c))$. Higher BLEU is better, with scores above 20 indicating coherent semantic alignment.
+    \item \textbf{Next-Token Accuracy (\%):} The percentage of generated tokens that match the exact ground-truth token at the same sequential position.
+    \item \textbf{Routing Entropy:} Measures expert dispatch uniformity, defined as $H = -\sum_{i=1}^N f_i \log f_i$. Maximum entropy ($\log 4 \approx 1.386$) indicates perfect load balancing across all 4 experts.
+\end{itemize}
+
+\section{Empirical Results and Comparative Analysis}
+
+\subsection{MoE Translation Performance and Routing Specialization}
 
 \begin{table}[h]
 \centering
 \small
 \caption{Empirical translation results on \texttt{belumind/en-vi-ja-curated-500k-triplets} (Colab Pro GPU).}
 \label{tab:moe_results}
-\resizebox{\textwidth}{!}{\begin{tabular}{lcccccc}
+\resizebox{\textwidth}{!}{
+\begin{tabular}{lcccccc}
 \toprule
 \textbf{Configuration} & \textbf{Active Gating} & \textbf{Val Loss} & \textbf{Val Perplexity} & \textbf{BLEU} & \textbf{Routing Entropy} & \textbf{Active Compute} \\
 \midrule
@@ -194,9 +218,9 @@ Matched-Active MoE  & 2 of 4 (Doubled)   & 2.937 & 18.85 & 0.0160 & 1.37 & 100.0
 \label{fig:heatmap}
 \end{figure}
 
-As shown in Figure~\ref{fig:heatmap}, early layers exhibit pronounced language specialization: Expert 0 processes 68\% of Vietnamese tokens, while Expert 2 captures 72\% of Japanese tokens. In upper layers, routing balances evenly (24--26\% per expert), demonstrating that early layers specialize in non-romanized orthography, while deeper layers converge toward shared English semantics.
+As shown in Figure~\ref{fig:heatmap}, early layers display clear language specialization: Expert 0 handles 68\% of Vietnamese tokens, while Expert 2 captures 72\% of Japanese tokens. In upper layers, routing distributes uniformly (24--26\% per expert), demonstrating that lower layers specialize in non-romanized orthography, whereas deeper layers converge toward shared English semantics.
 
-\subsection{Pretraining Optimizer Dynamics}
+\subsection{Pretraining Optimizer Dynamics (Figure 2 Replication)}
 
 \begin{figure}[h]
 \centering
@@ -210,7 +234,8 @@ As shown in Figure~\ref{fig:heatmap}, early layers exhibit pronounced language s
 \small
 \caption{Optimizer performance and memory comparison on \texttt{human-ai-parallel-corpus}.}
 \label{tab:opt_results}
-\resizebox{\textwidth}{!}{\begin{tabular}{llccccc}
+\resizebox{\textwidth}{!}{
+\begin{tabular}{llccccc}
 \toprule
 \textbf{Optimizer} & \textbf{Taxonomy Category} & \textbf{Val Loss} & \textbf{Val PPL} & \textbf{Test BLEU} & \textbf{Memory Overhead} & \textbf{Convergence} \\
 \midrule
@@ -223,6 +248,8 @@ CustomSophia & Hessian Clipped (Bonus)     & 3.69 & 40.0 & 23.4 & $2\times$ para
 \end{tabular}}
 \end{table}
 
+As shown in Figure~\ref{fig:dynamics} and Table~\ref{tab:opt_results}, \textbf{CustomMuon} and \textbf{CustomAdan} achieved superior loss descent compared to AdamW. Muon's polar updates maintain transformation spectrum bounds, while Adan's gradient difference terms dampen oscillations. \textbf{CustomLion} attained near-AdamW performance while cutting optimizer state memory in half.
+
 \subsection{Autoregressive Decoding Benchmark (1,000 ROCStories Evaluations)}
 
 \begin{table}[h]
@@ -230,7 +257,8 @@ CustomSophia & Hessian Clipped (Bonus)     & 3.69 & 40.0 & 23.4 & $2\times$ para
 \small
 \caption{1,000-sample ROCStories benchmark on \texttt{EleutherAI/Pythia-160M} (Colab Pro GPU).}
 \label{tab:dec_results}
-\resizebox{\textwidth}{!}{\begin{tabular}{lcccccc}
+\resizebox{\textwidth}{!}{
+\begin{tabular}{lcccccc}
 \toprule
 \textbf{Strategy} & \textbf{Parameters} & \textbf{Perplexity} & \textbf{Accuracy (\%)} & \textbf{BLEU} & \textbf{Total Latency} & \textbf{Speed / Sample} \\
 \midrule
@@ -252,14 +280,14 @@ Beam Search ($B=4$) & $B=4, \alpha=0.6$   & 3.14 & 5.03\% & 0.373 & 1804.5s & 1.
 \end{figure}
 
 \paragraph{Mathematical Equivalence Proof ($B=1$ vs. Greedy):}
-When beam width $B=1$, the candidate beam pool size is 1, and the search expansion step reduces to selecting $\arg\max_v \log P(v \mid x_{<t})$. Our empirical test verifies that Beam-1 and Greedy yield \textbf{100.0\% identical token IDs, identical perplexity (2.80), and identical accuracy (7.19\%)}.
+When $B=1$, the candidate pool size is 1, and hypothesis pruning simplifies to $\arg\max_v \log P(v \mid x_{<t})$. Our empirical test verifies that Beam-1 and Greedy yield \textbf{100.0\% identical token sequences, identical perplexity (2.80), and identical accuracy (7.19\%)}.
 
-\paragraph{Beam Search Time Complexity Analysis:}
-For sequence length $T$, vocabulary size $V$, and beam width $B$, generating each token requires expanding $B$ hypotheses through the model forward pass:
+\paragraph{Beam Search Time Complexity Proof:}
+Generating $T$ tokens with beam width $B$ requires evaluating $B$ sequences through the model:
 \begin{equation}
 \mathcal{O}\Big(B \cdot T \cdot \text{Cost}(\text{Forward}) + B \cdot \log(B \cdot V)\Big) \approx \mathcal{O}(B \cdot T \cdot \text{Cost}(\text{Forward}))
 \end{equation}
-Empirical execution times on 1,000 stories confirm exact linear scaling ($R^2 > 0.999$): $B=1$ takes 475.3s, $B=2$ takes 918.0s (1.93x), and $B=4$ takes 1804.5s (3.80x).
+Execution times on 1,000 stories confirm exact linear scaling ($R^2 > 0.999$): $B=1$ took 475.3s, $B=2$ took 918.0s (1.93x), and $B=4$ took 1804.5s (3.80x).
 
 \paragraph{Qualitative Narrative Analysis (\texttt{raw\_generations.json}):}
 \begin{itemize}
@@ -270,44 +298,25 @@ Empirical execution times on 1,000 stories confirm exact linear scaling ($R^2 > 
     \item \textbf{Beam Search ($B=4$):} \textit{On the day of tryouts, he played exceptionally well and was selected for the varsity squad.} (Fluent).
 \end{itemize}
 
-\section{Efficiency, Limitations, and Compute Budget}
+\section{Compute Budget, Scaling, and Limitations}
 
-\paragraph{Compute Budget \& 10M--30M Parameter Sizing Justification:}
-Section 1 of the assignment PDF includes a ``Low Compute Tip'' suggesting restricting models between 10M and 100M parameters (noting a ~30M model takes ~1 hour per 30M tokens on a 2080 Ti). This is explicitly a compute suggestion to prevent memory overflows. Our dense baseline sits at \textbf{8.90M parameters} and Matched-Active MoE reaches \textbf{12.06M parameters}. This sizing enabled our full multi-epoch pretraining sweep to finish in 1.5 hours on Colab Pro while strictly satisfying all three grading rules: identical total parameters across C1--C4, identical active parameters for C5, and fixed token budgets.
+\paragraph{Parameter Sizing and Compute Justification:}
+Section 1 of the assignment PDF provides a ``Low Compute Tip'' suggesting restricting models between 10M and 100M parameters, noting that a ~30M model requires ~1 hour per 30M tokens on a 2080 Ti. This advice is intended to prevent memory exhaustion and prolonged runs. Our dense baseline contains \textbf{8.90M parameters} and Matched-Active MoE reaches \textbf{12.06M parameters}. This configuration strikes the optimal balance: it enabled complete multi-epoch sweeps in 1.5 hours on Colab Pro while strictly adhering to all three grading constraints: (1) total parameter parity across C1--C4, (2) active parameter parity for C5, and (3) identical token budgets.
 
-\paragraph{Memory Footprint:}
-CustomLion cuts optimizer memory by 50\% by eliminating the second-moment buffer $v_t$, making it the most viable optimizer for edge training.
+\paragraph{Memory and Latency Trade-offs:}
+CustomLion saves 50\% optimizer memory, making it well-suited for edge pretraining. Beam search, while achieving lower perplexity, incurs a strict linear latency penalty ($4\times$ slower at $B=4$). Nucleus sampling provides the best practical trade-off between speed and human narrative quality.
 
-\section{Viva \& TA Evaluation Defense Guide}
+\section{Deliverables and Public Repositories}
 
-\begin{enumerate}
-    \item \textbf{Why use Switch auxiliary loss instead of pure cross-entropy?} \\
-    \textit{Answer:} Cross-entropy does not penalize expert starvation. Random initialization gives one expert an early advantage, creating a feedback loop where 1 expert monopolizes all tokens. Switch loss $\mathcal{L}_{\text{aux}} = \alpha N \sum f_i P_i$ penalizes non-uniform routing; because $P_i$ is differentiable while $f_i$ is treated as constant, backpropagation pulls routing weights toward balanced utilization ($f_i = 1/N$) without disrupting task gradients.
-
-    \item \textbf{How was parameter parity guaranteed between Dense and MoE?} \\
-    \textit{Answer:} Setting expert width $d_{\text{expert}} = D_{\text{ff}} / 4 = 256$ ensures 4 experts collectively match the dense MLP width (1024), differing solely by the router projection ($256 \times 4 = 1,024$ weights), a negligible \textbf{+0.12\%} difference. For Matched-Active (C5), setting $d_{\text{expert}} = 512$ with $k=2$ active experts yields active parameter parity within \textbf{+0.08\%}.
-
-    \item \textbf{Why use Byte-Level BPE for Japanese and Vietnamese?} \\
-    \textit{Answer:} Japanese Kanji/Kana and Vietnamese multi-accent diacritics are non-romanized. Character tokenizers produce huge vocabularies or OOV tokens. Byte-Level BPE operates directly on UTF-8 bytes, guaranteeing zero OOV tokens while compacting frequent subwords.
-
-    \item \textbf{How does CustomMuon accelerate pretraining over AdamW?} \\
-    \textit{Answer:} AdamW scales coordinates independently via scalar variance $\sqrt{v_t}$. Muon treats weight matrices $W \in \mathbb{R}^{d_{\text{out}} \times d_{\text{in}}}$ geometrically, applying a quintic Newton-Schulz polynomial iteration to map momentum to the nearest orthogonal matrix. Orthogonal updates preserve singular value spectra ($\|U x\|_2 = \|x\|_2$), eliminating vanishing gradients in deep attention projections.
-
-    \item \textbf{Why did Top-$p$ produce better narrative quality than Beam Search?} \\
-    \textit{Answer:} Greedy and beam search maximize token likelihood. In creative storytelling, high-probability tokens are generic and repetitive ('very happy'). Top-$p$ truncates improbable tokens but samples probabilistically from the top 90\% cumulative mass, preserving narrative variety.
-\end{enumerate}
-
-\section{Deliverables and Submission Links}
-
-In accordance with General Instructions 5 and 6, all model artifacts and telemetry runs are publicly hosted:
+In accordance with General Instructions 5 and 6, all model artifacts, code, and logs are publicly hosted:
 \begin{itemize}
     \item \textbf{Code Repository:} \url{https://github.com/Chiranjeevi-2020/ANLP_assignment2}
-    \item \textbf{WandB Experiment Dashboard:} \url{https://wandb.ai/Chiranjeevi-2020/ANLP-Assignment-2}
-    \item \textbf{Hugging Face Model Hub:} \url{https://huggingface.co/Chiranjeevi-2020/ANLP-Assignment-2}
+    \item \textbf{Weights \& Biases (WandB) Runs:} \url{https://wandb.ai/Chiranjeevi-2020/ANLP-Assignment-2}
+    \item \textbf{Hugging Face Model Checkpoints:} \url{https://huggingface.co/Chiranjeevi-2020/ANLP-Assignment-2}
 \end{itemize}
 
 \section{Conclusion}
-This assignment rigorously verifies the core mechanics of modern LLMs: sparse MoE achieves compute-efficient capacity when active parameters are matched; orthogonal matrix optimization (Muon) significantly outpaces AdamW in pretraining convergence; and nucleus sampling balances entropy and fluency in open-ended generation.
+This study validates key design principles in modern language modeling: sparse MoE achieves compute-efficient capacity when active parameters are matched; polar matrix optimization (Muon) delivers substantial pretraining acceleration; and nucleus sampling balances entropy and fluency in open-ended generation.
 
 \begin{thebibliography}{9}
 \bibitem{vaswani2017} A. Vaswani et al., ``Attention Is All You Need,'' \textit{NeurIPS}, 2017.
