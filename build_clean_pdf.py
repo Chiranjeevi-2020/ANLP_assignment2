@@ -118,15 +118,12 @@ def generate_report_pdf(filename="report.pdf"):
 
     import subprocess
     try:
-        subprocess.run(["git", "add", "-A"], check=True)
-        commit_msg = (
-            "Fix Sophia Hessian update dynamics, beam search early stopping on EOS, "
-            "add raw_generations.json deliverable, and extend test suite to 25/25 passing"
-        )
-        res = subprocess.run(["git", "commit", "-m", commit_msg], capture_output=True, text=True)
-        print("Git commit result:", res.stdout or res.stderr)
-    except Exception as e:
-        print("Git commit exception:", e)
+        status = subprocess.check_output(["git", "status", "--porcelain"]).decode().strip()
+        if status:
+            subprocess.run(["git", "add", "-A"], check=True)
+            subprocess.run(["git", "commit", "-m", "Clean repository state and finalize report.pdf"], check=True)
+    except Exception:
+        pass
 
 if __name__ == "__main__":
     generate_report_pdf()
