@@ -1,44 +1,44 @@
 {
   "greedy": {
-    "mean_perplexity": 14.82,
-    "mean_accuracy": 31.4,
-    "bleu_score": 18.6,
-    "total_time_seconds": 12.4,
-    "seconds_per_sample": 0.0124
+    "mean_perplexity": 2.802714023280676,
+    "mean_accuracy": 7.189319807465112,
+    "bleu_score": 0.44602633780139667,
+    "total_time_seconds": 474.31357886499427,
+    "seconds_per_sample": 0.47431357886499426
   },
   "top_k": {
-    "mean_perplexity": 17.25,
-    "mean_accuracy": 34.8,
-    "bleu_score": 21.2,
-    "total_time_seconds": 14.1,
-    "seconds_per_sample": 0.0141
+    "mean_perplexity": 11.133779459112342,
+    "mean_accuracy": 8.38884305856976,
+    "bleu_score": 0.46103357491638475,
+    "total_time_seconds": 483.2593420359999,
+    "seconds_per_sample": 0.4832593420359999
   },
   "top_p": {
-    "mean_perplexity": 16.1,
-    "mean_accuracy": 36.5,
-    "bleu_score": 22.8,
-    "total_time_seconds": 14.9,
-    "seconds_per_sample": 0.0149
+    "mean_perplexity": 10.170208045258127,
+    "mean_accuracy": 8.373627166177826,
+    "bleu_score": 0.4349216742991063,
+    "total_time_seconds": 487.14089497199166,
+    "seconds_per_sample": 0.48714089497199164
   },
   "beam_1": {
-    "mean_perplexity": 14.82,
-    "mean_accuracy": 31.4,
-    "bleu_score": 18.6,
-    "total_time_seconds": 12.5,
-    "seconds_per_sample": 0.0125
+    "mean_perplexity": 2.802714023280676,
+    "mean_accuracy": 7.189319807465112,
+    "bleu_score": 0.44602633780139667,
+    "total_time_seconds": 475.27729634400157,
+    "seconds_per_sample": 0.47527729634400157
   },
   "beam_2": {
-    "mean_perplexity": 13.95,
-    "mean_accuracy": 33.1,
-    "bleu_score": 20.4,
-    "total_time_seconds": 24.8,
-    "seconds_per_sample": 0.0248
+    "mean_perplexity": 2.521494762738637,
+    "mean_accuracy": 5.735581792030958,
+    "bleu_score": 0.3814429313086083,
+    "total_time_seconds": 917.9942803570066,
+    "seconds_per_sample": 0.9179942803570066
   },
   "beam_4": {
-    "mean_perplexity": 13.12,
-    "mean_accuracy": 35.0,
-    "bleu_score": 21.9,
-    "total_time_seconds": 49.3,
-    "seconds_per_sample": 0.0493
+    "mean_perplexity": 3.1417001385207173,
+    "mean_accuracy": 5.02530418923513,
+    "bleu_score": 0.37340549233790205,
+    "total_time_seconds": 1804.4809435950137,
+    "seconds_per_sample": 1.8044809435950138
   }
 }

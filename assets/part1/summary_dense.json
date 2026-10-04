@@ -1,0 +1,30 @@
+{
+  "variant": "dense",
+  "loss": 2.881509196171773,
+  "perplexity": 17.841178710252873,
+  "bleu": 0.01596210663110066,
+  "sample_predictions": [
+    " an an an an an an an an an an an an an an an an a",
+    " an an an an an an an an an an an an an an an an a",
+    " ",
+    " ",
+    " an an an an an an an an an an an an an an an an a"
+  ],
+  "sample_references": [
+    [
+      "3. With three languges in simplified Chinese, traditional Chinese and English, the software interface can be switched easily."
+    ],
+    [
+      "3. With three languges in simplified Chinese, traditional Chinese and English, the software interface can be switched easily."
+    ],
+    [
+      "Most recent update: 2011-12-01"
+    ],
+    [
+      "Most recent update: 2011-12-01"
+    ],
+    [
+      "3 Q: Why choose Shineland Packing Company?"
+    ]
+  ]
+}
