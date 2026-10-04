@@ -212,20 +212,27 @@ Empirical benchmark results verify that latency scales linearly with beam width 
 
 ## 6. Google Colab GPU Training Guide
 
-Because your local laptop does not have a dedicated GPU, full training of all 5 MoE ablations and 5 optimizers should be executed on Google Colab (Free T4 or Pro A100 GPU).
+Because full training of all 5 MoE ablations and 5 optimizers requires GPU compute, execute `colab/ANLP_Assignment2_Colab_Runner.ipynb` on Google Colab (Free T4 or Colab Pro A100 GPU).
 
-### Quickstart Steps:
-1. Open Google Colab: [colab.research.google.com](https://colab.research.google.com/)
-2. Upload `colab/ANLP_Assignment2_Colab_Runner.ipynb`
-3. Enable GPU Runtime: **Runtime -> Change runtime type -> Hardware accelerator -> T4 GPU (or A100)**
-4. Set your Hugging Face and WandB API keys in the notebook secrets:
-   ```python
-   import os
-   os.environ["WANDB_API_KEY"] = "your_wandb_key"
-   os.environ["HF_TOKEN"] = "your_hf_token"
-   ```
-5. Click **Runtime -> Run all**.
-The notebook automatically trains the 5 MoE ablations, runs the 5 custom optimizers, evaluates decoding on Pythia-160M, saves checkpoints to HuggingFace, and generates all report figures!
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Chiranjeevi-2020/ANLP_assignment2/blob/main/colab/ANLP_Assignment2_Colab_Runner.ipynb)
+
+### Direct GitHub-Root Workflow (Zero Manual File Uploads):
+1. **Open the Notebook directly from GitHub**:
+   - Click the **Open In Colab** badge above, or:
+   - Go to [Google Colab](https://colab.research.google.com/) &rarr; Click the **GitHub** tab &rarr; Enter `Chiranjeevi-2020/ANLP_assignment2` &rarr; Select `colab/ANLP_Assignment2_Colab_Runner.ipynb`.
+2. **Enable GPU Hardware Acceleration**:
+   - Navigate to **Runtime &rarr; Change runtime type &rarr; Hardware accelerator &rarr; T4 GPU (or A100)**.
+3. **Set API Secrets in Colab Secrets Vault (Key 🔑 Icon on Left Sidebar)**:
+   - Click the Key icon (🔑) on the left sidebar &rarr; **+ Add new secret**.
+   - Add `WANDB_API_KEY`: Paste your WandB key ([wandb.ai/authorize](https://wandb.ai/authorize)).
+   - Add `HF_TOKEN`: Paste your Hugging Face write token ([huggingface.co/settings/tokens](https://huggingface.co/settings/tokens)).
+   - **Important**: Toggle the switch **Notebook access** to **ON** for both secrets.
+4. **Run Step 1 (Clones GitHub Repo as Working Root)**:
+   - Step 1 automatically runs `git clone https://github.com/Chiranjeevi-2020/ANLP_assignment2.git` and `%cd ANLP_assignment2`.
+   - This sets the repository root as the Colab working directory, completely eliminating all `FileNotFoundError` issues.
+5. **Run All or Run Steps Sequentially**:
+   - Click **Runtime &rarr; Run all** (or run cell-by-cell).
+   - Generates all checkpoints, heatmaps, optimizer loss curves, and packages `submission_artifacts.zip` for instant download.
 
 ---
 
