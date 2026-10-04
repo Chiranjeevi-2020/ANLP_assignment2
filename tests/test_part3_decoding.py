@@ -93,3 +93,19 @@ def test_beam_1_matches_greedy():
     beam_1_ids, _, _ = beam_search_decode(model, input_ids, beam_width=1, max_new_tokens=6, length_penalty=0.0)
 
     assert torch.equal(greedy_ids, beam_1_ids), f"Beam 1 {beam_1_ids} differs from greedy {greedy_ids}"
+
+
+def test_beam_search_early_stopping_on_eos():
+    """Verifies that beam search halts early when all hypotheses hit the EOS token."""
+    torch.manual_seed(42)
+    model = DummyCausalLM(vocab_size=20)
+    input_ids = torch.tensor([[1, 2, 3]], dtype=torch.long)
+
+    out_1, _, _ = greedy_decode(model, input_ids, max_new_tokens=1)
+    eos_candidate = out_1[0, -1].item()
+
+    best_seq, elapsed, scores = beam_search_decode(
+        model, input_ids, beam_width=2, max_new_tokens=20, eos_token_id=eos_candidate
+    )
+    assert best_seq.shape[1] < 23, f"Beam search failed to stop early on EOS: length={best_seq.shape[1]}"
+

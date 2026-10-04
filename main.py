@@ -152,16 +152,6 @@ def verify_all_architectures():
 
     logger.info("=== All verification checks passed successfully! ===")
 
-    # Ensure repository is staged and committed cleanly
-    import subprocess
-    if os.path.exists("git_commit.py"):
-        os.remove("git_commit.py")
-    subprocess.run("git add .", shell=True)
-    subprocess.run('git commit -m "Initial complete submission commit: MoE architectures, custom optimizers, decoding strategies, assets, and report"', shell=True)
-    res = subprocess.run("git log -n 1 --oneline", shell=True, capture_output=True, text=True)
-    if res.stdout.strip():
-        logger.info(f"Git commit record: {res.stdout.strip()}")
-
 
 def main():
     parser = argparse.ArgumentParser(description="ANLP Assignment 2: MoE, Optimizers, Decoding")

@@ -80,3 +80,44 @@ def test_decoupled_weight_decay():
 
     # With decoupled weight decay, p = p * (1 - lr * wd) = 1.0 * (1 - 0.01) = 0.99
     assert torch.allclose(p, torch.full((4, 4), 0.99), atol=1e-5), f"Decoupled weight decay mismatch: {p[0, 0].item()}"
+
+
+def test_muon_mixed_1d_and_2d_parameters():
+    """Verifies that Muon handles both 2D weight matrices and 1D vector parameters simultaneously."""
+    torch.manual_seed(42)
+    w2d = nn.Parameter(torch.randn(8, 8))
+    b1d = nn.Parameter(torch.randn(8))
+    opt = CustomMuon([w2d, b1d], lr=0.05, fallback_lr=0.05, weight_decay=0.01)
+
+    target2d = torch.randn(8, 8)
+    target1d = torch.randn(8)
+
+    for _ in range(50):
+        opt.zero_grad()
+        loss = 0.5 * torch.sum((w2d - target2d) ** 2) + 0.5 * torch.sum((b1d - target1d) ** 2)
+        loss.backward()
+        opt.step()
+
+    final_loss = 0.5 * torch.sum((w2d - target2d) ** 2) + 0.5 * torch.sum((b1d - target1d) ** 2)
+    assert not torch.isnan(final_loss)
+    assert final_loss.item() < 30.0
+
+
+def test_sophia_without_update_hessian_converges():
+    """Verifies that CustomSophia converges even when update_hessian is never explicitly called."""
+    torch.manual_seed(42)
+    dim = 8
+    target = torch.randn(dim, dim)
+    w = nn.Parameter(torch.randn(dim, dim) * 0.5)
+    opt = CustomSophia([w], lr=0.05, weight_decay=0.0)
+
+    initial_loss = 0.5 * torch.sum((w - target) ** 2).item()
+    for _ in range(50):
+        opt.zero_grad()
+        loss = 0.5 * torch.sum((w - target) ** 2)
+        loss.backward()
+        opt.step()  # Note: NOT calling update_hessian()
+
+    final_loss = 0.5 * torch.sum((w - target) ** 2).item()
+    assert final_loss < initial_loss * 0.1, f"CustomSophia failed to converge without update_hessian: {initial_loss:.4f} -> {final_loss:.4f}"
+

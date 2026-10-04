@@ -412,6 +412,7 @@ class CustomSophia(Optimizer):
                     state["hessian"] = torch.zeros_like(p)
                     state["hessian_step"] = 0
                 state["hessian_step"] += 1
+                state["hessian_called_externally"] = True
                 # Diagonal Hessian approximation via stochastic gradient outer product
                 h_hat = p.grad.pow(2)
                 state["hessian"].mul_(beta2).add_(h_hat, alpha=1.0 - beta2)
@@ -462,15 +463,15 @@ class CustomSophia(Optimizer):
                 bias_correction1 = 1.0 - beta1 ** step
                 m_hat = exp_avg / bias_correction1
 
-                h_step = state.get("hessian_step", 0)
-                if h_step > 0:
+                if state.get("hessian_called_externally", False):
+                    h_step = max(1, state.get("hessian_step", 1))
                     bias_correction2 = 1.0 - beta2 ** h_step
                     h_hat = hessian / bias_correction2
                 else:
-                    # If update_hessian was not explicitly called, initialize/update from grad^2
+                    # Dynamically update diagonal Hessian estimate from grad^2 each step
                     hessian.mul_(beta2).add_(grad.pow(2), alpha=1.0 - beta2)
-                    state["hessian_step"] = 1
-                    h_hat = hessian / (1.0 - beta2)
+                    bias_correction2 = 1.0 - beta2 ** step
+                    h_hat = hessian / bias_correction2
 
                 # 4. Scaled and clipped update step (Sophia: clip(m_hat / max(h_hat, gamma), rho))
                 denom = torch.clamp(h_hat, min=gamma)

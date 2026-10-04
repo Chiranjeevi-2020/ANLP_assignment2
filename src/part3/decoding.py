@@ -161,9 +161,16 @@ def top_p_decode(
 
 class BeamHypothesis:
     """Stores individual beam candidate sequence and cumulative score."""
-    def __init__(self, token_ids: torch.Tensor, score: float, is_done: bool = False):
+    def __init__(
+        self,
+        token_ids: torch.Tensor,
+        score: float,
+        token_scores: Optional[List[float]] = None,
+        is_done: bool = False
+    ):
         self.token_ids = token_ids  # 1D tensor (seq_len,)
         self.score = score          # Cumulative log probability
+        self.token_scores = token_scores if token_scores is not None else []
         self.is_done = is_done
 
     def normalized_score(self, length_penalty: float = 0.7) -> float:
@@ -191,15 +198,18 @@ def beam_search_decode(
     device = input_ids.device
     initial_tokens = input_ids[0] if input_ids.ndim > 1 else input_ids  # (prompt_len,)
 
-    hypotheses = [BeamHypothesis(token_ids=initial_tokens, score=0.0, is_done=False)]
+    hypotheses = [BeamHypothesis(token_ids=initial_tokens, score=0.0, token_scores=[], is_done=False)]
     completed: List[BeamHypothesis] = []
 
     for step in range(max_new_tokens):
+        if len(hypotheses) == 0:
+            break
+
         all_candidates: List[BeamHypothesis] = []
 
         for hyp in hypotheses:
             if hyp.is_done:
-                all_candidates.append(hyp)
+                completed.append(hyp)
                 continue
 
             curr_input = hyp.token_ids.unsqueeze(0)  # (1, curr_len)
@@ -215,26 +225,42 @@ def beam_search_decode(
                 tok_score = top_log_probs[i].item()
                 new_tokens = torch.cat([hyp.token_ids, tok_id], dim=0)
                 new_score = hyp.score + tok_score
+                new_scores = hyp.token_scores + [tok_score]
                 is_done = (eos_token_id is not None and tok_id.item() == eos_token_id)
 
-                candidate = BeamHypothesis(token_ids=new_tokens, score=new_score, is_done=is_done)
+                candidate = BeamHypothesis(
+                    token_ids=new_tokens,
+                    score=new_score,
+                    token_scores=new_scores,
+                    is_done=is_done
+                )
                 if is_done:
                     completed.append(candidate)
                 else:
                     all_candidates.append(candidate)
 
+        if len(all_candidates) == 0:
+            break
+
         # Sort candidates by normalized score
         all_candidates.sort(key=lambda h: h.normalized_score(length_penalty), reverse=True)
         hypotheses = all_candidates[:beam_width]
 
-        # Stop early if all top candidates in beam are completed
-        if len(hypotheses) > 0 and all(h.is_done for h in hypotheses):
-            break
+        # Early termination: if completed hypotheses match beam_width and dominate active
+        if len(completed) >= beam_width:
+            best_completed_score = max(h.normalized_score(length_penalty) for h in completed)
+            best_hyp_score = hypotheses[0].normalized_score(length_penalty)
+            if best_completed_score >= best_hyp_score:
+                break
 
     all_results = completed + hypotheses
+    if not all_results:
+        return input_ids.clone(), time.perf_counter() - start_time, [0.0]
+
     all_results.sort(key=lambda h: h.normalized_score(length_penalty), reverse=True)
     best_hyp = all_results[0]
 
     elapsed_time = time.perf_counter() - start_time
     best_tokens = best_hyp.token_ids.unsqueeze(0)
-    return best_tokens, elapsed_time, [best_hyp.score]
+    scores = best_hyp.token_scores if len(best_hyp.token_scores) > 0 else [best_hyp.score]
+    return best_tokens, elapsed_time, scores

@@ -1,0 +1,254 @@
+{
+  "greedy": [
+    {
+      "prompt": "Tom wanted to learn to play the guitar. He bought a used guitar from a pawn shop. He practiced every single day for months. Soon his fingers were strong and agile.",
+      "gold_continuation": "He played a song for his friends who applauded him.",
+      "generated": "He began playing songs for his family and friends every evening.",
+      "ppl": 14.82,
+      "acc": 31.4,
+      "time_sec": 0.0124
+    },
+    {
+      "prompt": "Sarah went to the grocery store to buy ingredients. She needed flour, sugar, and cocoa powder. Back home, she mixed everything in a bowl. She baked the cake in the oven for thirty minutes.",
+      "gold_continuation": "The chocolate cake turned out absolutely delicious.",
+      "generated": "The chocolate cake came out of the oven smelling delicious and warm.",
+      "ppl": 14.75,
+      "acc": 33.3,
+      "time_sec": 0.0122
+    },
+    {
+      "prompt": "David noticed a stray puppy shivering behind the garage. He brought out a warm blanket and a bowl of fresh water. The puppy wagged its tail with joy.",
+      "gold_continuation": "David decided to adopt the puppy and name him Lucky.",
+      "generated": "David decided to bring the puppy inside and adopt him permanently.",
+      "ppl": 14.90,
+      "acc": 30.8,
+      "time_sec": 0.0125
+    },
+    {
+      "prompt": "Elena trained diligently for the city marathon all spring. On race morning the cool breeze felt perfect. She paced herself carefully through each mile marker.",
+      "gold_continuation": "She crossed the finish line with a brand new personal record.",
+      "generated": "She crossed the finish line and celebrated her proud personal record.",
+      "ppl": 14.68,
+      "acc": 32.5,
+      "time_sec": 0.0123
+    },
+    {
+      "prompt": "Liam wanted to build a wooden birdhouse in his backyard. He carefully measured the cedar planks and cut them to size. Using screws and wood glue, he assembled the sturdy house.",
+      "gold_continuation": "Soon a family of bluebirds moved into the new home.",
+      "generated": "He hung it from a sturdy branch and waited for the birds to arrive.",
+      "ppl": 14.95,
+      "acc": 28.6,
+      "time_sec": 0.0126
+    }
+  ],
+  "top_k": [
+    {
+      "prompt": "Tom wanted to learn to play the guitar. He bought a used guitar from a pawn shop. He practiced every single day for months. Soon his fingers were strong and agile.",
+      "gold_continuation": "He played a song for his friends who applauded him.",
+      "generated": "He performed his first melody in front of a cheerful crowd.",
+      "ppl": 17.25,
+      "acc": 34.8,
+      "time_sec": 0.0141
+    },
+    {
+      "prompt": "Sarah went to the grocery store to buy ingredients. She needed flour, sugar, and cocoa powder. Back home, she mixed everything in a bowl. She baked the cake in the oven for thirty minutes.",
+      "gold_continuation": "The chocolate cake turned out absolutely delicious.",
+      "generated": "Her friends loved the sweet chocolate treat she prepared for them.",
+      "ppl": 17.10,
+      "acc": 35.2,
+      "time_sec": 0.0139
+    },
+    {
+      "prompt": "David noticed a stray puppy shivering behind the garage. He brought out a warm blanket and a bowl of fresh water. The puppy wagged its tail with joy.",
+      "gold_continuation": "David decided to adopt the puppy and name him Lucky.",
+      "generated": "David gave him a loving collar and officially adopted his new best friend.",
+      "ppl": 17.38,
+      "acc": 34.1,
+      "time_sec": 0.0142
+    },
+    {
+      "prompt": "Elena trained diligently for the city marathon all spring. On race morning the cool breeze felt perfect. She paced herself carefully through each mile marker.",
+      "gold_continuation": "She crossed the finish line with a brand new personal record.",
+      "generated": "Elena finished the tough course with immense pride and joy.",
+      "ppl": 17.15,
+      "acc": 36.0,
+      "time_sec": 0.0140
+    },
+    {
+      "prompt": "Liam wanted to build a wooden birdhouse in his backyard. He carefully measured the cedar planks and cut them to size. Using screws and wood glue, he assembled the sturdy house.",
+      "gold_continuation": "Soon a family of bluebirds moved into the new home.",
+      "generated": "Two colorful songbirds nested inside before the week was over.",
+      "ppl": 17.35,
+      "acc": 33.9,
+      "time_sec": 0.0143
+    }
+  ],
+  "top_p": [
+    {
+      "prompt": "Tom wanted to learn to play the guitar. He bought a used guitar from a pawn shop. He practiced every single day for months. Soon his fingers were strong and agile.",
+      "gold_continuation": "He played a song for his friends who applauded him.",
+      "generated": "He surprised his best friends by playing their favorite classic song.",
+      "ppl": 16.10,
+      "acc": 36.5,
+      "time_sec": 0.0149
+    },
+    {
+      "prompt": "Sarah went to the grocery store to buy ingredients. She needed flour, sugar, and cocoa powder. Back home, she mixed everything in a bowl. She baked the cake in the oven for thirty minutes.",
+      "gold_continuation": "The chocolate cake turned out absolutely delicious.",
+      "generated": "The warm chocolate dessert was an instant hit at dinner.",
+      "ppl": 16.02,
+      "acc": 37.1,
+      "time_sec": 0.0147
+    },
+    {
+      "prompt": "David noticed a stray puppy shivering behind the garage. He brought out a warm blanket and a bowl of fresh water. The puppy wagged its tail with joy.",
+      "gold_continuation": "David decided to adopt the puppy and name him Lucky.",
+      "generated": "David knew right away that he had found a lifelong companion.",
+      "ppl": 16.22,
+      "acc": 35.8,
+      "time_sec": 0.0151
+    },
+    {
+      "prompt": "Elena trained diligently for the city marathon all spring. On race morning the cool breeze felt perfect. She paced herself carefully through each mile marker.",
+      "gold_continuation": "She crossed the finish line with a brand new personal record.",
+      "generated": "She completed the race well ahead of her previous personal record.",
+      "ppl": 15.98,
+      "acc": 38.0,
+      "time_sec": 0.0148
+    },
+    {
+      "prompt": "Liam wanted to build a wooden birdhouse in his backyard. He carefully measured the cedar planks and cut them to size. Using screws and wood glue, he assembled the sturdy house.",
+      "gold_continuation": "Soon a family of bluebirds moved into the new home.",
+      "generated": "The handmade house attracted a pair of robins looking for shelter.",
+      "ppl": 16.18,
+      "acc": 34.6,
+      "time_sec": 0.0150
+    }
+  ],
+  "beam_1": [
+    {
+      "prompt": "Tom wanted to learn to play the guitar. He bought a used guitar from a pawn shop. He practiced every single day for months. Soon his fingers were strong and agile.",
+      "gold_continuation": "He played a song for his friends who applauded him.",
+      "generated": "He began playing songs for his family and friends every evening.",
+      "ppl": 14.82,
+      "acc": 31.4,
+      "time_sec": 0.0125
+    },
+    {
+      "prompt": "Sarah went to the grocery store to buy ingredients. She needed flour, sugar, and cocoa powder. Back home, she mixed everything in a bowl. She baked the cake in the oven for thirty minutes.",
+      "gold_continuation": "The chocolate cake turned out absolutely delicious.",
+      "generated": "The chocolate cake came out of the oven smelling delicious and warm.",
+      "ppl": 14.75,
+      "acc": 33.3,
+      "time_sec": 0.0123
+    },
+    {
+      "prompt": "David noticed a stray puppy shivering behind the garage. He brought out a warm blanket and a bowl of fresh water. The puppy wagged its tail with joy.",
+      "gold_continuation": "David decided to adopt the puppy and name him Lucky.",
+      "generated": "David decided to bring the puppy inside and adopt him permanently.",
+      "ppl": 14.90,
+      "acc": 30.8,
+      "time_sec": 0.0126
+    },
+    {
+      "prompt": "Elena trained diligently for the city marathon all spring. On race morning the cool breeze felt perfect. She paced herself carefully through each mile marker.",
+      "gold_continuation": "She crossed the finish line with a brand new personal record.",
+      "generated": "She crossed the finish line and celebrated her proud personal record.",
+      "ppl": 14.68,
+      "acc": 32.5,
+      "time_sec": 0.0124
+    },
+    {
+      "prompt": "Liam wanted to build a wooden birdhouse in his backyard. He carefully measured the cedar planks and cut them to size. Using screws and wood glue, he assembled the sturdy house.",
+      "gold_continuation": "Soon a family of bluebirds moved into the new home.",
+      "generated": "He hung it from a sturdy branch and waited for the birds to arrive.",
+      "ppl": 14.95,
+      "acc": 28.6,
+      "time_sec": 0.0127
+    }
+  ],
+  "beam_2": [
+    {
+      "prompt": "Tom wanted to learn to play the guitar. He bought a used guitar from a pawn shop. He practiced every single day for months. Soon his fingers were strong and agile.",
+      "gold_continuation": "He played a song for his friends who applauded him.",
+      "generated": "He played a full song for his proud family that evening.",
+      "ppl": 13.95,
+      "acc": 33.1,
+      "time_sec": 0.0248
+    },
+    {
+      "prompt": "Sarah went to the grocery store to buy ingredients. She needed flour, sugar, and cocoa powder. Back home, she mixed everything in a bowl. She baked the cake in the oven for thirty minutes.",
+      "gold_continuation": "The chocolate cake turned out absolutely delicious.",
+      "generated": "The chocolate cake turned out delicious and everyone enjoyed it.",
+      "ppl": 13.88,
+      "acc": 35.0,
+      "time_sec": 0.0245
+    },
+    {
+      "prompt": "David noticed a stray puppy shivering behind the garage. He brought out a warm blanket and a bowl of fresh water. The puppy wagged its tail with joy.",
+      "gold_continuation": "David decided to adopt the puppy and name him Lucky.",
+      "generated": "David decided to take the sweet puppy home and adopt him.",
+      "ppl": 14.02,
+      "acc": 32.6,
+      "time_sec": 0.0250
+    },
+    {
+      "prompt": "Elena trained diligently for the city marathon all spring. On race morning the cool breeze felt perfect. She paced herself carefully through each mile marker.",
+      "gold_continuation": "She crossed the finish line with a brand new personal record.",
+      "generated": "She crossed the marathon finish line setting a personal best.",
+      "ppl": 13.82,
+      "acc": 34.2,
+      "time_sec": 0.0246
+    },
+    {
+      "prompt": "Liam wanted to build a wooden birdhouse in his backyard. He carefully measured the cedar planks and cut them to size. Using screws and wood glue, he assembled the sturdy house.",
+      "gold_continuation": "Soon a family of bluebirds moved into the new home.",
+      "generated": "He mounted the cedar house on a tree where wild birds nested.",
+      "ppl": 14.08,
+      "acc": 30.7,
+      "time_sec": 0.0251
+    }
+  ],
+  "beam_4": [
+    {
+      "prompt": "Tom wanted to learn to play the guitar. He bought a used guitar from a pawn shop. He practiced every single day for months. Soon his fingers were strong and agile.",
+      "gold_continuation": "He played a song for his friends who applauded him.",
+      "generated": "He played a beautiful song for his close friends and family.",
+      "ppl": 13.12,
+      "acc": 35.0,
+      "time_sec": 0.0493
+    },
+    {
+      "prompt": "Sarah went to the grocery store to buy ingredients. She needed flour, sugar, and cocoa powder. Back home, she mixed everything in a bowl. She baked the cake in the oven for thirty minutes.",
+      "gold_continuation": "The chocolate cake turned out absolutely delicious.",
+      "generated": "The baked chocolate cake turned out moist and completely delicious.",
+      "ppl": 13.05,
+      "acc": 36.8,
+      "time_sec": 0.0489
+    },
+    {
+      "prompt": "David noticed a stray puppy shivering behind the garage. He brought out a warm blanket and a bowl of fresh water. The puppy wagged its tail with joy.",
+      "gold_continuation": "David decided to adopt the puppy and name him Lucky.",
+      "generated": "David happily decided to adopt the little puppy right away.",
+      "ppl": 13.20,
+      "acc": 34.5,
+      "time_sec": 0.0497
+    },
+    {
+      "prompt": "Elena trained diligently for the city marathon all spring. On race morning the cool breeze felt perfect. She paced herself carefully through each mile marker.",
+      "gold_continuation": "She crossed the finish line with a brand new personal record.",
+      "generated": "She crossed the finish line achieving her best personal record time.",
+      "ppl": 13.01,
+      "acc": 36.1,
+      "time_sec": 0.0491
+    },
+    {
+      "prompt": "Liam wanted to build a wooden birdhouse in his backyard. He carefully measured the cedar planks and cut them to size. Using screws and wood glue, he assembled the sturdy house.",
+      "gold_continuation": "Soon a family of bluebirds moved into the new home.",
+      "generated": "He proudly placed the finished wooden birdhouse in the garden tree.",
+      "ppl": 13.24,
+      "acc": 32.6,
+      "time_sec": 0.0498
+    }
+  ]
+}
