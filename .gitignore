@@ -62,3 +62,6 @@ Thumbs.db
 
 # Test caches
 .pytest_cache/
+
+# Local scripts
+update_notebook.py

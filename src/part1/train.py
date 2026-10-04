@@ -254,18 +254,43 @@ def run_part1_training(
 
     train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
     val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False, collate_fn=collate_fn)
-
     optimizer = torch.optim.AdamW(model.parameters(), lr=config.learning_rate, weight_decay=config.weight_decay)
+
+    wandb_logger = None
+    if os.environ.get("WANDB_API_KEY") and os.environ.get("WANDB_MODE") != "offline":
+        try:
+            wandb_logger = WandbLogger(
+                project="ANLP-Assignment-2",
+                name=f"Part1-MoE-{ablation_variant}",
+                config={"ablation": ablation_variant, "epochs": epochs, "samples": max_samples}
+            )
+        except Exception as e:
+            logger.warning(f"Could not initialize WandB ({e}).")
 
     logger.info(f"Starting training for {epochs} epoch(s)...")
     step_offset = 0
     for epoch in range(epochs):
-        avg_loss, step_offset = train_epoch(model, train_loader, optimizer, device, step_offset=step_offset)
+        avg_loss, step_offset = train_epoch(
+            model,
+            train_loader,
+            optimizer,
+            device,
+            wandb_logger=wandb_logger,
+            step_offset=step_offset
+        )
         logger.info(f"Epoch {epoch + 1}/{epochs} | Average Training Loss: {avg_loss:.4f}")
 
     # Evaluate and extract expert heatmaps
     logger.info("Evaluating model and extracting language routing decisions...")
     eval_results = evaluate_and_extract_heatmaps(model, val_loader, tokenizer, device)
+
+    if wandb_logger:
+        wandb_logger.log({
+            "val/loss": eval_results["loss"],
+            "val/perplexity": eval_results["perplexity"],
+            "val/bleu": eval_results["bleu"]
+        })
+        wandb_logger.finish()
 
     # Save heatmap if MoE
     if config.use_moe:

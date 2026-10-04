@@ -123,6 +123,17 @@ def run_optimizer_benchmark(
         model = Transformer(config).to(device)
         optimizer = get_optimizer(opt_name, model, lr=config.learning_rate, weight_decay=config.weight_decay)
 
+        wandb_logger = None
+        if os.environ.get("WANDB_API_KEY") and os.environ.get("WANDB_MODE") != "offline":
+            try:
+                wandb_logger = WandbLogger(
+                    project="ANLP-Assignment-2",
+                    name=f"Part2-Opt-{opt_name}",
+                    config={"optimizer": opt_name, "budget_tokens": total_budget_tokens}
+                )
+            except Exception as e:
+                logger.warning(f"Could not initialize WandB ({e}).")
+
         tokens_seen = 0
         next_checkpoint_tokens = checkpoint_interval_tokens
         history: Dict[str, List[float]] = {
@@ -138,6 +149,13 @@ def run_optimizer_benchmark(
         history["val_loss"].append(v_loss)
         history["val_ppl"].append(v_ppl)
         history["test_bleu"].append(t_bleu)
+        if wandb_logger:
+            wandb_logger.log({
+                "tokens_seen": 0,
+                "val/loss": v_loss,
+                "val/perplexity": v_ppl,
+                "test/bleu": t_bleu
+            }, step=0)
 
         model.train()
         train_iter = iter(train_loader)
@@ -171,9 +189,19 @@ def run_optimizer_benchmark(
                 history["val_loss"].append(v_loss)
                 history["val_ppl"].append(v_ppl)
                 history["test_bleu"].append(t_bleu)
+                if wandb_logger:
+                    wandb_logger.log({
+                        "tokens_seen": tokens_seen,
+                        "val/loss": v_loss,
+                        "val/perplexity": v_ppl,
+                        "test/bleu": t_bleu
+                    }, step=tokens_seen)
                 logger.info(f"[{opt_name}] Tokens: {tokens_seen}/{total_budget_tokens} | Val Loss: {v_loss:.4f} | BLEU: {t_bleu:.2f}")
                 next_checkpoint_tokens += checkpoint_interval_tokens
                 model.train()
+
+        if wandb_logger:
+            wandb_logger.finish()
 
         all_results[opt_name] = history
 
