@@ -32,7 +32,7 @@
 \maketitle
 
 \begin{abstract}
-This report details an architectural and empirical investigation of three core components in neural language model design: (1) \textbf{Sparse Mixture of Experts (MoE)} feed-forward layers evaluated across five capacity-controlled ablations on non-romanized translation; (2) \textbf{First- and Second-Order Pretraining Optimizers from Scratch} implemented strictly via \texttt{torch.optim.Optimizer} subclassing; and (3) \textbf{Autoregressive Decoding Strategies} built exclusively on top of \texttt{model.forward()} on \texttt{EleutherAI/Pythia-160M} using 1,000 narrative stories from \texttt{hamishivi/ROCStories}. We present analytical derivations for load-balancing regularizers, orthogonal matrix polar iterations, and length-normalized beam search, complemented by empirical validation on GPU hardware. All code, checkpoints, and logs are publicly available.
+This report details an architectural and empirical investigation of three core components in neural language model design: (1) \textbf{Sparse Mixture of Experts (MoE)} feed-forward layers evaluated across five capacity-controlled ablations on non-romanized translation; (2) \textbf{First- and Second-Order Pretraining Optimizers from Scratch} implemented strictly via \texttt{torch.optim.Optimizer} subclassing; and (3) \textbf{Autoregressive Decoding Strategies} built exclusively on top of \texttt{model.forward()} on \texttt{EleutherAI/Pythia-160M} using 1,000 narrative stories from \texttt{hamishivi/ROCStories}. We present analytical derivations for load-balancing regularizers, orthogonal matrix polar iterations, and length-normalized beam search, complemented by empirical validation on GPU hardware. All code, evaluation metrics, and telemetry logs are publicly available.
 \end{abstract}
 
 \section{Problem Formulation and Datasets}
@@ -311,8 +311,7 @@ CustomLion saves 50\% optimizer memory, making it well-suited for edge pretraini
 In accordance with General Instructions 5 and 6, all model artifacts, code, and logs are publicly hosted:
 \begin{itemize}
     \item \textbf{Code Repository:} \url{https://github.com/Chiranjeevi-2020/ANLP_assignment2}
-    \item \textbf{Weights \& Biases (WandB) Runs:} \url{https://wandb.ai/Chiranjeevi-2020/ANLP-Assignment-2}
-    \item \textbf{Hugging Face Model Checkpoints:} \url{https://huggingface.co/Chiranjeevi-2020/ANLP-Assignment-2}
+    \item \textbf{Weights \& Biases (WandB) Runs:} \url{https://forge.coreweave.com/wandb/chiranjeevi-kumaravadivel-iiit-hyderabad/ANLP-Assignment-2}
 \end{itemize}
 
 \section{Conclusion}
