@@ -1,5 +1,8 @@
 # Advanced Natural Language Processing (ANLP) - Assignment 2
 
+**Candidate:** Chiranjeevi Kumaravadivel \quad | \quad **Roll Number:** `2023122010`  
+**Monsoon 2026** | International Institute of Information Technology, Hyderabad (IIIT-H)
+
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-ee4c2c.svg)](https://pytorch.org/)
 [![HuggingFace](https://img.shields.io/badge/%F0%9F%A4%97%20HuggingFace-Models%20%26%20Datasets-yellow)](https://huggingface.co/)
