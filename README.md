@@ -11,6 +11,7 @@
 ---
 
 ### 🔗 Official Submission Links & Artifacts (Deliverables)
+- **Hugging Face Model Hub:** [https://huggingface.co/Chiru20/ANLP_assignment2](https://huggingface.co/Chiru20/ANLP_assignment2)
 - **Weights & Biases (WandB) Dashboard:** [https://forge.coreweave.com/wandb/chiranjeevi-kumaravadivel-iiit-hyderabad/ANLP-Assignment-2](https://forge.coreweave.com/wandb/chiranjeevi-kumaravadivel-iiit-hyderabad/ANLP-Assignment-2)
 - **GitHub Source Repository:** [https://github.com/Chiranjeevi-2020/ANLP_assignment2](https://github.com/Chiranjeevi-2020/ANLP_assignment2)
 - **Official Technical Report (LaTeX PDF):** [`report.pdf`](./report.pdf) (8 pages, 11pt, matching IIIT-H assignment formatting)
